@@ -19,3 +19,4 @@
 void insereArtigo(){
   int fd = open(ARTIGOS, O_CREAT|O_APPEND|O_RDWR, 0777);
 }
+dscadcsd
