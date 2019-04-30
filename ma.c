@@ -19,7 +19,7 @@
 void preenche_espacos (char buf[SIZE_STRING]){
       int i = strlen(buf);
       for(;i<SIZE_STRING-1;i++){
-        buf[i]='a';
+        buf[i]=' ';
       }
       buf[i]='\n';
 }
@@ -85,20 +85,32 @@ int countLines(){
 }
 
 
+
 //inserir artigos
 // i <nome> <preço>
-
-void insereArtigo(int nome, float preco){
+//corrigir cenas de escrever no buffer
+void insereArtigo(char* nome, float preco){
   char buf[SIZE];
-  int fd = open("/artigos.txt", O_CREAT|O_APPEND|O_RDONLY, 0777);
-  int s = open("/strings.txt", O_CREAT|O_APPEND|O_RDONLY, 0777);
-  if(fd < 0)
+  int fd = open("artigos.txt", O_CREAT|O_RDWR, 0777);
+  int s = open("strings.txt", O_CREAT|O_RDWR, 0777);
+  if(fd < 0){
     exit(-1);
+    printf("fodeu");
+  }
   if(s < 0){
+    printf("fodeu");
     exit(-1);
   }
-  int count = countLines();
-  
+  int count = countLines() +1;
+  lseek(fd,SIZE*count, SEEK_SET);
+  char buffer[SIZE];
+  sprintf(buffer, "artigo: %d, preco: %f\n", count, preco);
+  write(fd, buffer, strlen(buffer));
+  lseek(s, SIZE_STRING*count, SEEK_SET);
+  char b[SIZE_STRING];
+  sprintf(b, "nome: %s\n", nome);
+  preenche_espacos(b);
+  write(s, b,strlen(b));
 
   close(fd);
   close(s);
