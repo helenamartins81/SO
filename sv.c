@@ -44,3 +44,8 @@ void stocks(int codigo, int quantidade){
 
   close(fd);
 }
+
+int main(int argc, char const *argv[]) {
+
+  return 0;
+}

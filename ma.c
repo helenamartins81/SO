@@ -119,8 +119,26 @@ void insereArtigo(char* nome, float preco){
 }
 
 
-/*
-int main(int argc, char* argv[]){
 
+int main(int argc, char* argv[]){
+  int i = 0;
+  char *exec = strdup(argv[1]), *token;
+  const char s[2] = " ";
+  token = strtok(exec, s);
+  char *words[10];
+
+  for(i=0; token != NULL; i++){
+    words[i] = token;
+    token = strtok(NULL, s);
+  }
+  if((strcmp(words[0], "n"))==0){
+    altera_nome(atoi(words[1]), words[2]);
+  }
+  if((strcmp(words[0], "p"))==0){
+    altera_preco(atoi(words[1]), atof(words[2]));
+  }
+  if((strcmp(words[0], "i"))==0){
+    insereArtigo(words[1], atof(words[2]));
+  }
+  return 0;
 }
-*/
