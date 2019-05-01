@@ -35,7 +35,7 @@ int altera_nome(int code, char* nome){
   char buf[SIZE_STRING];
   sprintf(buf, "nome: %s", nome);
   preenche_espacos(buf);
-  write(fd, buf,strlen(buf));
+  write(fd, buf, strlen(buf));
 
   close(fd);
 return 0;
@@ -56,6 +56,7 @@ int altera_preco(int code, float preco){
     lseek(fd, SIZE*code , SEEK_SET);
     char buffer[SIZE];
     sprintf(buffer, "artigo: %d, preco: %f\n", code, preco);
+    preenche_espacos(buffer);
     write(fd, buffer, strlen(buffer));
 
     close(fd);
@@ -104,12 +105,13 @@ void insereArtigo(char* nome, float preco){
   lseek(fd,SIZE*count, SEEK_SET);
   char buffer[SIZE];
   sprintf(buffer, "artigo: %d, preco: %f\n", count, preco);
+  preenche_espacos(buffer);
   write(fd, buffer, strlen(buffer));
   lseek(s, SIZE_STRING*count, SEEK_SET);
   char b[SIZE_STRING];
   sprintf(b, "nome: %s\n", nome);
   preenche_espacos(b);
-  write(s, b,strlen(b));
+  write(s, b, strlen(b));
 
   close(fd);
   close(s);
