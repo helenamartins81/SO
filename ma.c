@@ -15,7 +15,6 @@
 
 //alterar nome do artigo
 // n <código> <novo nome>
-
 void preenche_espacos (char buf[SIZE_STRING]){
       int i = strlen(buf);
       for(;i<SIZE_STRING-1;i++){
@@ -25,7 +24,8 @@ void preenche_espacos (char buf[SIZE_STRING]){
 }
 
 
-//mudar para tamanho do nome variavel
+//falta mudar para tamanho do nome variavel
+//altera o nome de um artigo no ficheiro strings
 int altera_nome(int code, char* nome){
   int fd = open("strings.txt", O_CREAT|O_WRONLY, 0777);
   if(fd<0){
@@ -47,7 +47,6 @@ return 0;
 
 //alterar preço do artigo
 // p <código> <novo preço>
-//NAO ESTA A DAR ???
 
 int altera_preco(int code, float preco){
     int fd = open("artigos.txt", O_RDWR, 0777);
@@ -66,7 +65,7 @@ int altera_preco(int code, float preco){
 
 
 
-
+//conta as linhas de um ficheiro
 int countLines(){
   int fd = open("artigos.txt", O_RDONLY, 0777);
   if(fd<0){
@@ -120,7 +119,6 @@ void insereArtigo(char* nome, float preco){
 
 /*
 int main(int argc, char* argv[]){
-
 
 }
 */
