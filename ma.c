@@ -90,15 +90,12 @@ int countLines(){
 // i <nome> <preço>
 //corrigir cenas de escrever no buffer
 void insereArtigo(char* nome, float preco){
-  char buf[SIZE];
   int fd = open("artigos.txt", O_CREAT|O_RDWR, 0777);
   int s = open("strings.txt", O_CREAT|O_RDWR, 0777);
   if(fd < 0){
     exit(-1);
-    printf("fodeu");
   }
   if(s < 0){
-    printf("fodeu");
     exit(-1);
   }
   int count = countLines() +1;
@@ -119,25 +116,31 @@ void insereArtigo(char* nome, float preco){
 }
 
 
-
+// tem alguns erros mas funciona minimamente lol
+//falta corrigir cenas
 int main(int argc, char* argv[]){
-  int i = 0;
-  char *exec = strdup(argv[1]), *token;
+  int i, c=0;
+  char *exec ;
   const char s[2] = " ";
-  token = strtok(exec, s);
+  char *token;
   char *words[10];
+  for(i=1; i<argc; i++, c++){
+    exec = strdup(argv[i]);
+    token = strtok(exec, s);
+    words[c] = token;
+    printf("%s\n", words[c]);
 
-  for(i=0; token != NULL; i++){
-    words[i] = token;
-    token = strtok(NULL, s);
   }
   if((strcmp(words[0], "n"))==0){
+    printf("ya2\n");
     altera_nome(atoi(words[1]), words[2]);
   }
   if((strcmp(words[0], "p"))==0){
+    printf("ya3\n");
     altera_preco(atoi(words[1]), atof(words[2]));
   }
   if((strcmp(words[0], "i"))==0){
+    printf("ya4\n");
     insereArtigo(words[1], atof(words[2]));
   }
   return 0;
