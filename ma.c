@@ -11,7 +11,7 @@
 
 
 #define SIZE 30
-#define SIZE_STRING 50
+#define SIZE_STRING 80
 
 //alterar nome do artigo
 // n <código> <novo nome>
@@ -33,7 +33,7 @@ int altera_nome(int code, char* nome){
   }
   lseek(fd,SIZE_STRING*code, SEEK_SET);
   char buf[SIZE_STRING];
-  sprintf(buf, "nome: %s", nome);
+  sprintf(buf, "%s", nome);
   preenche_espacos(buf);
   write(fd, buf, strlen(buf));
 
@@ -41,6 +41,10 @@ int altera_nome(int code, char* nome){
 return 0;
 
 }
+
+
+
+
 
 
 
@@ -55,7 +59,7 @@ int altera_preco(int code, float preco){
     }
     lseek(fd, SIZE*code , SEEK_SET);
     char buffer[SIZE];
-    sprintf(buffer, "artigo: %d, preco: %f\n", code, preco);
+    sprintf(buffer, "%d %f\n", code, preco);
     preenche_espacos(buffer);
     write(fd, buffer, strlen(buffer));
 
@@ -101,12 +105,12 @@ void insereArtigo(char* nome, float preco){
   int count = countLines() +1;
   lseek(fd,SIZE*count, SEEK_SET);
   char buffer[SIZE];
-  sprintf(buffer, "artigo: %d, preco: %f\n", count, preco);
+  sprintf(buffer, "%d %f\n", count, preco);
   preenche_espacos(buffer);
   write(fd, buffer, strlen(buffer));
   lseek(s, SIZE_STRING*count, SEEK_SET);
   char b[SIZE_STRING];
-  sprintf(b, "nome: %s\n", nome);
+  sprintf(b, "%s\n", nome);
   preenche_espacos(b);
   write(s, b, strlen(b));
 
@@ -116,8 +120,9 @@ void insereArtigo(char* nome, float preco){
 }
 
 
-// tem alguns erros mas funciona minimamente lol
+
 //falta corrigir cenas
+//corrigir para ler varios comandos ao mesmo tempo
 int main(int argc, char* argv[]){
   int i, c=0;
   char *exec ;

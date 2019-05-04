@@ -45,7 +45,19 @@ void stocks(int codigo, int quantidade){
   close(fd);
 }
 
-int main(int argc, char const *argv[]) {
+/* cenas dos guioes dos pipes com nome
+int main(){
+  int f, x, l;
+  char buf[256];
+  if((l=open("log", O_CREAT | O_WRONLY, 0666)) < 0)
+    perror("erro");
+
+  if((f = open("fifo", O_RDONLY)) < 0)
+    perror("erro");
+
+  while((x = read(f, buf, 256)) > 0)
+    write(l, buf, x);
 
   return 0;
 }
+*/
