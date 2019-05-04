@@ -9,144 +9,129 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#define FSTRINGS "strings.txt"
+#define FARTIGOS "artigos.txt"
 
-#define SIZE 30
-#define SIZE_STRING 80
+typedef unsigned long Filepos;
+typedef unsigned long ArtIndex;
 
-//alterar nome do artigo
-// n <código> <novo nome>
-void preenche_espacos (char buf[SIZE_STRING]){
-      int i = strlen(buf);
-      for(;i<SIZE_STRING-1;i++){
-        buf[i]=' ';
-      }
-      buf[i]='\n';
-}
+typedef struct {
+  Filepos nome;
+  double preco;
+} Artigo;
 
-
-//falta mudar para tamanho do nome variavel
-//altera o nome de um artigo no ficheiro strings
-int altera_nome(int code, char* nome){
-  int fd = open("strings.txt", O_CREAT|O_WRONLY, 0777);
-  if(fd<0){
-    exit(-1);
-  }
-  lseek(fd,SIZE_STRING*code, SEEK_SET);
-  char buf[SIZE_STRING];
-  sprintf(buf, "%s", nome);
-  preenche_espacos(buf);
-  write(fd, buf, strlen(buf));
-
+Filepos inserir_nome(char * nome) {
+  int fd = open(FSTRINGS, O_CREAT | O_WRONLY, 0660);
+  Filepos pos = lseek(fd, 0, SEEK_END);
+  int tamanho = strlen(nome);
+  write(fd, &tamanho, sizeof(tamanho));
+  write(fd, nome, tamanho);
   close(fd);
-return 0;
+  return pos;
+}
 
+char * ler_nome(Filepos nome) {
+  int fd = open(FSTRINGS, O_CREAT | O_RDONLY, 0660);
+  Filepos pos = lseek(fd, nome, SEEK_SET);
+  int tamanho;
+  read(fd, &tamanho, sizeof(tamanho));
+  char * nome_lido = calloc(tamanho + 1, 1);
+  read(fd, nome_lido, tamanho);
+  return nome_lido;
+}
+
+ArtIndex inserir_artigo(char *nome, double preco) {
+  Artigo novo;
+  novo.nome = inserir_nome(nome);
+  novo.preco = preco;
+  int fd = open(FARTIGOS, O_CREAT | O_RDWR, 0660);
+  Filepos pos = lseek(fd, 0, SEEK_END);
+  write(fd, &novo, sizeof(novo));
+  return pos / sizeof(Artigo);
 }
 
 
+void modificar_nome(ArtIndex artigo, char *novonome) {
+  Artigo registo;
+  int fd = open(FARTIGOS, O_CREAT | O_RDWR, 0660);
+  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  read(fd, &registo, sizeof(registo));
+  registo.nome = inserir_nome(novonome);
+  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  write(fd, &registo, sizeof(registo));
+}
+
+void modificar_preco(ArtIndex artigo, double novopreco) {
+  Artigo registo;
+  int fd = open(FARTIGOS, O_CREAT | O_RDWR, 0660);
+  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  read(fd, &registo, sizeof(registo));
+  registo.preco = novopreco;
+  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  write(fd, &registo, sizeof(registo));
+}
+
+void imprimir_artigo(ArtIndex artigo) {
+  Artigo registo;
+  int fd = open(FARTIGOS, O_CREAT | O_RDONLY, 0660);
+  Filepos pos = lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
+    printf("esse artigo nao existe\n");
+  else {
+    char * nome_ptr = ler_nome(registo.nome);
+    printf("%ld:%s:%lf", artigo, nome_ptr, registo.preco);
+  }
+}
 
 
-
-
-
-
-//alterar preço do artigo
-// p <código> <novo preço>
-
-int altera_preco(int code, float preco){
-    int fd = open("artigos.txt", O_RDWR, 0777);
-    if(fd < 0){
-      exit(-1);
+void interpretar_linha(char *cmd) {
+  switch (cmd[0]) {
+    case 'i':
+    {
+      char nome[100];
+      double preco;
+      int params = sscanf(cmd, "i %s %lf", nome, &preco);
+      Filepos artigo = inserir_artigo(nome, preco);
+      printf("artigo %ld\n", artigo);
+      break;
     }
-    lseek(fd, SIZE*code , SEEK_SET);
-    char buffer[SIZE];
-    sprintf(buffer, "%d %f\n", code, preco);
-    preenche_espacos(buffer);
-    write(fd, buffer, strlen(buffer));
 
-    close(fd);
-    return 0;
-}
-
-
-
-
-//conta as linhas de um ficheiro
-int countLines(){
-  int fd = open("artigos.txt", O_RDONLY, 0777);
-  if(fd<0){
-    exit(-1);
-  }
-  int count= 0;
-  char c;
-  while(read(fd, &c, 1)==1){
-    if(c=='\n'){
-      count++;
+    case 'n':
+    {
+      Filepos codigo;
+      char nome[100];
+      int params = sscanf(cmd, "n %lu %s", &codigo, nome);
+      modificar_nome(codigo, nome);
+      break;
     }
-  }
 
-  close(fd);
-  return count;
+    case 'p':
+    {
+      Filepos codigo;
+      double preco;
+      int params = sscanf(cmd, "p %lu %lf", &codigo, &preco);
+      modificar_preco(codigo, preco);
+      printf("artigo %ld\n", codigo);
+      break;
+    }
+    case 'l':
+    {
+      Filepos artigo;
+      int params = sscanf(cmd, "l %lu", &artigo);
+      imprimir_artigo(artigo);
+      printf("artigo %ld\n", artigo);
+      break;
+    }
+    default:
+      printf("operacao invalida: %s\n", cmd);
+
+  }
 }
 
-
-
-//inserir artigos
-// i <nome> <preço>
-//corrigir cenas de escrever no buffer
-void insereArtigo(char* nome, float preco){
-  int fd = open("artigos.txt", O_CREAT|O_RDWR, 0777);
-  int s = open("strings.txt", O_CREAT|O_RDWR, 0777);
-  if(fd < 0){
-    exit(-1);
+int main() {
+  char cmd[200];
+  while (fgets(cmd, sizeof(cmd), stdin) > 0) {
+    if (strlen(cmd) > 0)
+      interpretar_linha(cmd);
   }
-  if(s < 0){
-    exit(-1);
-  }
-  int count = countLines() +1;
-  lseek(fd,SIZE*count, SEEK_SET);
-  char buffer[SIZE];
-  sprintf(buffer, "%d %f\n", count, preco);
-  preenche_espacos(buffer);
-  write(fd, buffer, strlen(buffer));
-  lseek(s, SIZE_STRING*count, SEEK_SET);
-  char b[SIZE_STRING];
-  sprintf(b, "%s\n", nome);
-  preenche_espacos(b);
-  write(s, b, strlen(b));
-
-  close(fd);
-  close(s);
-
-}
-
-
-
-//falta corrigir cenas
-//corrigir para ler varios comandos ao mesmo tempo
-int main(int argc, char* argv[]){
-  int i, c=0;
-  char *exec ;
-  const char s[2] = " ";
-  char *token;
-  char *words[10];
-  for(i=1; i<argc; i++, c++){
-    exec = strdup(argv[i]);
-    token = strtok(exec, s);
-    words[c] = token;
-    printf("%s\n", words[c]);
-
-  }
-  if((strcmp(words[0], "n"))==0){
-    printf("ya2\n");
-    altera_nome(atoi(words[1]), words[2]);
-  }
-  if((strcmp(words[0], "p"))==0){
-    printf("ya3\n");
-    altera_preco(atoi(words[1]), atof(words[2]));
-  }
-  if((strcmp(words[0], "i"))==0){
-    printf("ya4\n");
-    insereArtigo(words[1], atof(words[2]));
-  }
-  return 0;
 }
