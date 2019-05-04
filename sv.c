@@ -1,5 +1,4 @@
-//controlar stocks;receber pedidos do cliente de vendas;registar as vendas efectuadas
-
+//inserir novos artigos ou modificar atributos de artigos.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,55 +8,137 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 
 
-#define SIZE 50
-#define SIZE_STRING 50
+#define FVENDAS "vendas.txt"
+#define FSTOCKS "stocks.txt"
+#define FARTIGOS "artigos.txt"
 
 
-//registar vendas efectuadas
+typedef unsigned long Filepos;
+typedef unsigned long ArtIndex;
 
-void registarVenda(int codigo, int quantidade, float montante){
-  char buf[SIZE];
-  int fd = open("vendas.txt", O_CREAT|O_RDWR, 0777);
-  if(fd < 0){
-    exit(-1);
+typedef struct {
+  Filepos nome;
+  double preco;
+} Artigo;
+
+typedef struct {
+  ArtIndex codigo;
+  double quantidade;
+  double total;
+  time_t tempo;
+} Venda;
+
+int preco_total(ArtIndex artigo, double quantidade) {
+  Artigo registo;
+  int fd = open(FARTIGOS, O_CREAT | O_RDWR, 0660);
+  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  read(fd, &registo, sizeof(registo));
+  double total = registo.preco * quantidade;
+  return total;
+}
+
+ArtIndex inserir_venda(ArtIndex codigo, double quantidade){
+  Venda novo;
+  novo.codigo = codigo;
+  novo.quantidade = quantidade;
+  novo.total = preco_total(codigo,quantidade);
+  novo.tempo = time(&novo.tempo);
+  int fd = open(FVENDAS, O_CREAT | O_RDWR, 0660);
+  Filepos pos = lseek(fd, 0, SEEK_END);
+  write(fd, &novo, sizeof(novo));
+  return pos / sizeof(Venda);
+}
+
+void imprimir_venda(ArtIndex venda) {
+  Venda registo;
+  int fd = open(FVENDAS, O_CREAT | O_RDONLY, 0660);
+  Filepos pos = lseek(fd, venda * sizeof(Venda), SEEK_SET);
+  if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
+    printf("esse artigo nao existe\n");
+  else {
+    printf("codigo %ld\nquantidade %lf\npreço total %lf\ntempo:%s\n", registo.codigo, registo.quantidade, registo.total, ctime(&registo.tempo));
   }
-  lseek(fd,SIZE*codigo, SEEK_SET);
-  sprintf(buf, "artigo: %d, quantidade: %d, montante: %f", codigo, quantidade, montante);
-  write(fd, buf, strlen(buf));
-
-  close(fd);
 }
+/*
+void modificar_nome(ArtIndex artigo, char *novonome) {
+  Artigo registo;
+  int fd = open(FARTIGOS, O_CREAT | O_RDWR, 0660);
+  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  read(fd, &registo, sizeof(registo));
+  registo.nome = inserir_nome(novonome);
+  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  write(fd, &registo, sizeof(registo));
+}*/
 
 
 
-void stocks(int codigo, int quantidade){
-  char buf[SIZE];
-  int fd = open("stocks.txt", O_CREAT|O_RDWR, 0777);
-  if(fd < 0){
-    exit(-1);
+/*
+void imprimir_artigo(ArtIndex artigo) {
+  Artigo registo;
+  int fd = open(FARTIGOS, O_CREAT | O_RDONLY, 0660);
+  Filepos pos = lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
+    printf("esse artigo nao existe\n");
+  else {
+    char * nome_ptr = ler_nome(registo.nome);
+    printf("%ld:%s:%lf", artigo, nome_ptr, registo.preco);
   }
-  lseek(fd,SIZE*codigo, SEEK_SET);
-  sprintf(buf, "artigo: %d, quantidade: %d", codigo, quantidade);
-  write(fd, buf, strlen(buf));
+}*/
 
-  close(fd);
+
+void interpretar_linha(char *cmd) {
+  switch (cmd[0]) {
+    case 'v':
+    {
+      ArtIndex codigo;
+      double quantidade;
+      double total;
+      int params = sscanf(cmd, "v %lu %lf %lf", &codigo, &quantidade, &total);
+      Filepos venda = inserir_venda(codigo, quantidade);
+      printf("Venda %ld\n", venda);
+      break;
+    }
+
+    /*case 'n':
+    {
+      Filepos codigo;
+      char nome[100];
+      int params = sscanf(cmd, "n %lu %s", &codigo, nome);
+      modificar_nome(codigo, nome);
+      break;
+    }
+
+    case 'p':
+    {
+      Filepos codigo;
+      double preco;
+      int params = sscanf(cmd, "p %lu %lf", &codigo, &preco);
+      modificar_preco(codigo, preco);
+      printf("artigo %ld\n", codigo);
+      break;
+    }*/
+    case 'l':
+    {
+      Filepos venda;
+      int params = sscanf(cmd, "l %lu", &venda);
+      imprimir_venda(venda);
+      printf("venda %ld\n", venda);
+      break;
+    }
+    default:
+      printf("operacao invalida: %s\n", cmd);
+
+  }
 }
 
-/* cenas dos guioes dos pipes com nome
-int main(){
-  int f, x, l;
-  char buf[256];
-  if((l=open("log", O_CREAT | O_WRONLY, 0666)) < 0)
-    perror("erro");
 
-  if((f = open("fifo", O_RDONLY)) < 0)
-    perror("erro");
-
-  while((x = read(f, buf, 256)) > 0)
-    write(l, buf, x);
-
-  return 0;
+int main() {
+  char cmd[200];
+  while (fgets(cmd, sizeof(cmd), stdin) > 0) {
+    if (strlen(cmd) > 0)
+      interpretar_linha(cmd);
+  }
 }
-*/
