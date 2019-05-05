@@ -11,14 +11,21 @@
 
 #define FSTRINGS "strings.txt"
 #define FARTIGOS "artigos.txt"
+#define FSTOCKS "stocks.txt"
 
 typedef unsigned long Filepos;
 typedef unsigned long ArtIndex;
+
 
 typedef struct {
   Filepos nome;
   double preco;
 } Artigo;
+
+typedef struct{
+  Filepos codigo;
+  double quantidade;
+} Stock;
 
 Filepos inserir_nome(char * nome) {
   int fd = open(FSTRINGS, O_CREAT | O_WRONLY, 0660);
@@ -37,7 +44,18 @@ char * ler_nome(Filepos nome) {
   read(fd, &tamanho, sizeof(tamanho));
   char * nome_lido = calloc(tamanho + 1, 1);
   read(fd, nome_lido, tamanho);
+  close(fd);
   return nome_lido;
+}
+
+Filepos inserir_stock( Filepos codigo){
+  Stock novo;
+  novo.quantidade = 100;
+  int fd = open(FSTOCKS, O_CREAT | O_RDWR, 0660);
+  Filepos pos = lseek(fd, 0, SEEK_END);
+  write(fd, &novo, sizeof(novo));
+  close(fd);
+  return pos / sizeof(Stock);
 }
 
 ArtIndex inserir_artigo(char *nome, double preco) {
@@ -47,9 +65,10 @@ ArtIndex inserir_artigo(char *nome, double preco) {
   int fd = open(FARTIGOS, O_CREAT | O_RDWR, 0660);
   Filepos pos = lseek(fd, 0, SEEK_END);
   write(fd, &novo, sizeof(novo));
+  inserir_stock(pos);
+  close(fd);
   return pos / sizeof(Artigo);
 }
-
 
 void modificar_nome(ArtIndex artigo, char *novonome) {
   Artigo registo;
@@ -59,6 +78,7 @@ void modificar_nome(ArtIndex artigo, char *novonome) {
   registo.nome = inserir_nome(novonome);
   lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
   write(fd, &registo, sizeof(registo));
+  close(fd);
 }
 
 void modificar_preco(ArtIndex artigo, double novopreco) {
@@ -69,6 +89,7 @@ void modificar_preco(ArtIndex artigo, double novopreco) {
   registo.preco = novopreco;
   lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
   write(fd, &registo, sizeof(registo));
+  close(fd);
 }
 
 void imprimir_artigo(ArtIndex artigo) {
@@ -79,10 +100,22 @@ void imprimir_artigo(ArtIndex artigo) {
     printf("esse artigo nao existe\n");
   else {
     char * nome_ptr = ler_nome(registo.nome);
-    printf("%ld:%s:%lf", artigo, nome_ptr, registo.preco);
+    printf("id: %ld\nnome:%s\npreço:%lf\n", artigo, nome_ptr, registo.preco);
   }
+  close(fd);
 }
 
+void imprimir_stock(ArtIndex stock) {
+  Stock registo;
+  int fd = open(FSTOCKS, O_CREAT | O_RDONLY, 0660);
+  Filepos pos = lseek(fd, stock * sizeof(Stock), SEEK_SET);
+  if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
+    printf("esse artigo nao existe\n");
+  else {
+    printf("id: %ld\nquantidade:%lf\n", stock, registo.quantidade);
+  }
+  close(fd);
+}
 
 void interpretar_linha(char *cmd) {
   switch (cmd[0]) {
@@ -119,7 +152,13 @@ void interpretar_linha(char *cmd) {
       Filepos artigo;
       int params = sscanf(cmd, "l %lu", &artigo);
       imprimir_artigo(artigo);
-      printf("artigo %ld\n", artigo);
+      break;
+    }
+    case 's':
+    {
+      Filepos stock;
+      int params = sscanf(cmd, "s %lu", &stock);
+      imprimir_stock(stock);
       break;
     }
     default:
