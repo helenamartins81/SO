@@ -50,11 +50,11 @@ void atualiza_stock(Filepos codigo, int quantidade){
   close(fd);
 }
 
-ArtIndex inserir_venda(ArtIndex codigo, double quantidade, int output){
+ArtIndex inserir_venda(ArtIndex codigo, double quantidade,int output){
   Venda novo;
   novo.codigo = codigo;
-  novo.quantidade = quantidade;
-  novo.total = preco_total(codigo,quantidade);
+  novo.quantidade = -1 * quantidade;
+  novo.total = preco_total(codigo,(-1*quantidade));
   novo.tempo = time(&novo.tempo);
   int fd = open(FVENDAS, O_CREAT | O_RDWR, 0660);
   Filepos pos = lseek(fd, 0, SEEK_END);
@@ -83,6 +83,7 @@ void imprimir_venda(ArtIndex venda, int output) {
 }
 
 void imprimir_stock(ArtIndex stock, int output) {
+
   Stock registo;
   int fd = open(FSTOCKS, O_CREAT | O_RDONLY, 0660);
   Filepos pos = lseek(fd, stock * sizeof(Stock), SEEK_SET);
@@ -108,41 +109,52 @@ void interpretar_linha(char *input, int output) {
   if ((output = open(nomesaida, O_WRONLY)) < 0)
     perror("Erro ao abrir o fifo de saida!\n");
 
-  switch (cmd[0]) {
-    case 'v':
+  int c = strlen(cmd);
+      printf("estouaqui %d\n", c);
+
+  switch (c) {
+    case 3:
     {
-      ArtIndex codigo;
-      double quantidade;
-      double total;
-      int params = sscanf(cmd, "v %lu %lf %lf", &codigo, &quantidade, &total);
-      Filepos venda = inserir_venda(codigo, quantidade, output);
-      snprintf(str, sizeof(str), "Venda %ld\n", venda);
-      print(output, str);
-      break;
-    }
-    case 's':
-    {
+
       Filepos stock;
-      int params = sscanf(cmd, "s %lu", &stock);
+      int params = sscanf(cmd, "%lu", &stock);
+      printf("aaa%d\n",params );
       imprimir_stock(stock, output);
       snprintf(str, sizeof(str), "stock %ld\n", stock);
       print(output, str);
       break;
     }
-    case 'l':
+    case 5:
     {
-      Filepos venda;
-      int params = sscanf(cmd, "l %lu", &venda);
-      imprimir_venda(venda, output);
-      //snprintf(str, sizeof(str), "venda %ld\n", venda);
-      //print(output, str);
-      break;
-    }
+      if(cmd[5]<0){
+          ArtIndex codigo;
+          double quantidade;
+          double total;
+          int params = sscanf(cmd, "%lu %lf", &codigo, &quantidade);
+          Filepos venda = inserir_venda(codigo, quantidade, output);
+          snprintf(str, sizeof(str), "Venda %ld\n", venda);
+          print(output, str);
+          break;
+        }
+      if(cmd[5]>0){
+          Filepos stock;
+          double quantidade
+          int params = sscanf(cmd, "%lu %lf", &stock, &quantidade);
+          atualiza_stock(stock,quantidade);
+          imprimir_stock(stock,output);
+          //snprintf(str, sizeof(str), "venda %ld\n", venda);
+          //print(output, str);
+          break;
+        }
+      }
+
     default:
       snprintf(str, sizeof(str), "operacao invalida: %s\n", cmd);
       print(output, str);
   }
 }
+
+
 
 int fifo_entrada = 0, fifo_saida = 1;
 

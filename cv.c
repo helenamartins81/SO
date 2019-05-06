@@ -9,11 +9,13 @@
 
 #include "defs.h"
 
+
 int fifo_entrada = 0, fifo_saida = 0;
 
 void abrir_fifo() {
-  if ((fifo_entrada = open("fifo-entrada", O_WRONLY)) < 0)
+  if ((fifo_entrada = open("fifo-entrada", O_WRONLY|O_CREAT, 0666)) < 0){
     perror("Erro ao abrir o fifo de entrada!\n");
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -21,7 +23,7 @@ int main(int argc, char *argv[]) {
   int len, *input_len = (int *)&buffer[0];
   char *input_str = &buffer[sizeof(int)];
 
-  sprintf(cliente, "fifo-%s", argv[1]);
+  sprintf(cliente, "fifo-%d", rand());
   mkfifo(cliente, 0660);
   abrir_fifo();
 
@@ -29,7 +31,7 @@ int main(int argc, char *argv[]) {
     if (strlen(cmd) > 0) {
       sprintf(input_str, "%s %s\n", cliente, cmd);
       *input_len = sizeof(int) + strlen(input_str) + 1;
-      printf("ENVIAR (%ld, %ld) %d: %s", input_len, input_str, *input_len, input_str);
+      printf("ENVIAR (%ls, %s) %d: %s", input_len, input_str, *input_len, input_str);
       write(fifo_entrada, buffer, *input_len);
 
       if ((fifo_saida = open(cliente, O_RDONLY)) < 0)
@@ -41,15 +43,3 @@ int main(int argc, char *argv[]) {
     }
   }
 }
-/* cenas dos guioes dos pipes com nome
-int main(){
-  int fd, n;
-  char buf[256];
-  if((fd = open("fifo", O_WRONLY)) < 0)
-    perror("erro ao abrir o ficheiro");
-
-  while((n = read(0, buf, 256)) > 0)
-    write(fd, buf, n);
-  return 0;
-}
-*/

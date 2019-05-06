@@ -92,7 +92,7 @@ void imprimir_artigo(ArtIndex artigo) {
 void imprimir_stock(ArtIndex stock) {
   Stock registo;
   int fd = open(FSTOCKS, O_CREAT | O_RDONLY, 0660);
-  Filepos pos = lseek(fd, stock * sizeof(Stock), SEEK_SET);
+  Filepos pos = lseek(fd, (stock - 1) * sizeof(Stock), SEEK_SET);
   if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
     printf("esse artigo nao existe\n");
   else {
