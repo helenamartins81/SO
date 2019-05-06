@@ -9,23 +9,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#define FSTRINGS "strings.txt"
-#define FARTIGOS "artigos.txt"
-#define FSTOCKS "stocks.txt"
-
-typedef unsigned long Filepos;
-typedef unsigned long ArtIndex;
-
-
-typedef struct {
-  Filepos nome;
-  double preco;
-} Artigo;
-
-typedef struct{
-  Filepos codigo;
-  double quantidade;
-} Stock;
+#include "defs.h"
 
 Filepos inserir_nome(char * nome) {
   int fd = open(FSTRINGS, O_CREAT | O_WRONLY, 0660);
@@ -48,9 +32,9 @@ char * ler_nome(Filepos nome) {
   return nome_lido;
 }
 
-Filepos inserir_stock( Filepos codigo){
+Filepos inicializa_stock( Filepos codigo){
   Stock novo;
-  novo.quantidade = 100;
+  novo.quantidade = 0;
   int fd = open(FSTOCKS, O_CREAT | O_RDWR, 0660);
   Filepos pos = lseek(fd, 0, SEEK_END);
   write(fd, &novo, sizeof(novo));
@@ -65,18 +49,18 @@ ArtIndex inserir_artigo(char *nome, double preco) {
   int fd = open(FARTIGOS, O_CREAT | O_RDWR, 0660);
   Filepos pos = lseek(fd, 0, SEEK_END);
   write(fd, &novo, sizeof(novo));
-  inserir_stock(pos);
+  inicializa_stock(pos);
   close(fd);
-  return pos / sizeof(Artigo);
+  return 1 + pos / sizeof(Artigo);
 }
 
 void modificar_nome(ArtIndex artigo, char *novonome) {
   Artigo registo;
   int fd = open(FARTIGOS, O_CREAT | O_RDWR, 0660);
-  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  lseek(fd, (artigo - 1) * sizeof(Artigo), SEEK_SET);
   read(fd, &registo, sizeof(registo));
   registo.nome = inserir_nome(novonome);
-  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  lseek(fd, (artigo - 1) * sizeof(Artigo), SEEK_SET);
   write(fd, &registo, sizeof(registo));
   close(fd);
 }
@@ -84,10 +68,10 @@ void modificar_nome(ArtIndex artigo, char *novonome) {
 void modificar_preco(ArtIndex artigo, double novopreco) {
   Artigo registo;
   int fd = open(FARTIGOS, O_CREAT | O_RDWR, 0660);
-  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  lseek(fd, (artigo - 1) * sizeof(Artigo), SEEK_SET);
   read(fd, &registo, sizeof(registo));
   registo.preco = novopreco;
-  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  lseek(fd, (artigo - 1) * sizeof(Artigo), SEEK_SET);
   write(fd, &registo, sizeof(registo));
   close(fd);
 }
@@ -95,7 +79,7 @@ void modificar_preco(ArtIndex artigo, double novopreco) {
 void imprimir_artigo(ArtIndex artigo) {
   Artigo registo;
   int fd = open(FARTIGOS, O_CREAT | O_RDONLY, 0660);
-  Filepos pos = lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  Filepos pos = lseek(fd, (artigo - 1) * sizeof(Artigo), SEEK_SET);
   if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
     printf("esse artigo nao existe\n");
   else {
