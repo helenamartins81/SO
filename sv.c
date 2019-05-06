@@ -10,48 +10,29 @@
 #include <sys/wait.h>
 #include <time.h>
 
+#include "defs.h"
 
-#define FVENDAS "vendas.txt"
-#define FSTOCKS "stocks.txt"
-#define FARTIGOS "artigos.txt"
-
-
-typedef unsigned long Filepos;
-typedef unsigned long ArtIndex;
-
-typedef struct {
-  Filepos nome;
-  double preco;
-} Artigo;
-
-typedef struct {
-  ArtIndex codigo;
-  double quantidade;
-  double total;
-  time_t tempo;
-} Venda;
-
-typedef struct{
-  Filepos codigo;
-  double quantidade;
-} Stock;
+void print(int output, char * str) {
+  write(output, str, strlen(str));
+  write(output, "\n", strlen("\n"));
+}
 
 double preco_total(ArtIndex artigo, double quantidade) {
   Artigo registo;
   int fd = open(FARTIGOS, O_CREAT | O_RDWR, 0660);
-  lseek(fd, artigo * sizeof(Artigo), SEEK_SET);
+  lseek(fd, (artigo - 1) * sizeof(Artigo), SEEK_SET);
   read(fd, &registo, sizeof(registo));
   double total = registo.preco * quantidade;
   return total;
 }
 
-int modifica_stock(ArtIndex artigo, double quantidade) {
+int modifica_stock(ArtIndex artigo, double quantidade, int output) {
   Stock registo;
   int fd = open(FSTOCKS, O_CREAT | O_RDWR, 0660);
   lseek(fd, artigo * sizeof(Stock), SEEK_SET);
   read(fd, &registo, sizeof(registo));
   if (registo.quantidade-quantidade < 0){
-    printf("não tem stock disponivel\n" );
+    print(output, "não tem stock disponivel\n" );
     return 0;}
   else registo.quantidade = registo.quantidade-quantidade;
   lseek(fd, artigo * sizeof(Stock), SEEK_SET);
@@ -60,7 +41,16 @@ int modifica_stock(ArtIndex artigo, double quantidade) {
   return 1;
 }
 
-ArtIndex inserir_venda(ArtIndex codigo, double quantidade){
+void atualiza_stock(Filepos codigo, int quantidade){
+  Stock registo;
+  registo.quantidade = registo.quantidade + quantidade;
+  int fd = open(FSTOCKS, O_CREAT | O_RDWR, 0660);
+  Filepos pos = lseek(fd, 0, SEEK_END);
+  write(fd, &registo, sizeof(registo));
+  close(fd);
+}
+
+ArtIndex inserir_venda(ArtIndex codigo, double quantidade, int output){
   Venda novo;
   novo.codigo = codigo;
   novo.quantidade = quantidade;
@@ -68,39 +58,56 @@ ArtIndex inserir_venda(ArtIndex codigo, double quantidade){
   novo.tempo = time(&novo.tempo);
   int fd = open(FVENDAS, O_CREAT | O_RDWR, 0660);
   Filepos pos = lseek(fd, 0, SEEK_END);
-  if (modifica_stock(codigo,quantidade) == 1){
-  write(fd, &novo, sizeof(novo));
+  if (modifica_stock(codigo, quantidade, output) == 1){
+    write(fd, &novo, sizeof(novo));
+    return 1 + pos / sizeof(Venda);
   }
   else {
-    printf("Venda invalida por falta de stock\n" );
+    print(output, "Venda invalida por falta de stock\n");
+    return 0;
   }
-  return pos / sizeof(Venda);
 }
 
 
-void imprimir_venda(ArtIndex venda) {
+void imprimir_venda(ArtIndex venda, int output) {
   Venda registo;
   int fd = open(FVENDAS, O_CREAT | O_RDONLY, 0660);
-  Filepos pos = lseek(fd, venda * sizeof(Venda), SEEK_SET);
+  Filepos pos = lseek(fd, (venda - 1) * sizeof(Venda), SEEK_SET);
   if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
-    printf("esse artigo nao existe\n");
+    print(output, "esse artigo nao existe\n");
   else {
-    printf("codigo %ld\nquantidade %lf\npreço total %lf\ntempo:%s\n", registo.codigo, registo.quantidade, registo.total, ctime(&registo.tempo));
+    char str[200];
+    sprintf(str, "codigo %ld\nquantidade %lf\npreço total %lf\ntempo:%s", registo.codigo, registo.quantidade, registo.total, ctime(&registo.tempo));
+    print(output, str);
   }
 }
 
-void imprimir_stock(ArtIndex stock) {
+void imprimir_stock(ArtIndex stock, int output) {
   Stock registo;
   int fd = open(FSTOCKS, O_CREAT | O_RDONLY, 0660);
   Filepos pos = lseek(fd, stock * sizeof(Stock), SEEK_SET);
   if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
-    printf("esse artigo nao existe\n");
+    print(output, "esse artigo nao existe\n");
   else {
-    printf("codigo %ld\nquantidade %lf\n", registo.codigo, registo.quantidade);
+    char str[200];
+    sprintf(str, "id: %ld\nquantidade:%lf\n", stock, registo.quantidade);
+    print(output, str);
   }
+  close(fd);
 }
 
-void interpretar_linha(char *cmd) {
+void interpretar_linha(char *input, int output) {
+  char str[200], nomesaida[200], *cmd;
+  printf("\ninterpretar input: %s", input);
+
+  sscanf(input, "%s", nomesaida, sizeof(nomesaida));
+  cmd = &input[strlen(nomesaida) + 1];
+
+  printf("\ninterpretar cmd: %s", cmd);
+
+  if ((output = open(nomesaida, O_WRONLY)) < 0)
+    perror("Erro ao abrir o fifo de saida!\n");
+
   switch (cmd[0]) {
     case 'v':
     {
@@ -108,37 +115,63 @@ void interpretar_linha(char *cmd) {
       double quantidade;
       double total;
       int params = sscanf(cmd, "v %lu %lf %lf", &codigo, &quantidade, &total);
-      Filepos venda = inserir_venda(codigo, quantidade);
-      printf("Venda %ld\n", venda);
+      Filepos venda = inserir_venda(codigo, quantidade, output);
+      snprintf(str, sizeof(str), "Venda %ld\n", venda);
+      print(output, str);
       break;
     }
     case 's':
     {
       Filepos stock;
-      int params = sscanf(cmd, "l %lu", &stock);
-      imprimir_stock(stock);
-      printf("stock %ld\n", stock);
+      int params = sscanf(cmd, "s %lu", &stock);
+      imprimir_stock(stock, output);
+      snprintf(str, sizeof(str), "stock %ld\n", stock);
+      print(output, str);
       break;
     }
     case 'l':
     {
       Filepos venda;
       int params = sscanf(cmd, "l %lu", &venda);
-      imprimir_venda(venda);
-      printf("venda %ld\n", venda);
+      imprimir_venda(venda, output);
+      //snprintf(str, sizeof(str), "venda %ld\n", venda);
+      //print(output, str);
       break;
     }
     default:
-      printf("operacao invalida: %s\n", cmd);
-
+      snprintf(str, sizeof(str), "operacao invalida: %s\n", cmd);
+      print(output, str);
   }
 }
 
+int fifo_entrada = 0, fifo_saida = 1;
+
+void criar_fifos() {
+  mkfifo("fifo-servidor", 0660);
+
+  if ((fifo_entrada = open("fifo-entrada", O_RDONLY)) < 0)
+    perror("Erro ao abrir o fifo de entrada!\n");
+}
+
+void atender_pedidos() {
+  char buffer[200];
+  int len, rd;
+  printf("a ler do pipe\n");
+  fflush(stdout);
+  while ((rd = read(fifo_entrada, &len, sizeof(len))) > 0) {
+    rd += read(fifo_entrada, &buffer, len - sizeof(int));
+    printf("LER %d/%d, buffer %s\n", rd, len, buffer);
+
+    interpretar_linha(buffer, fifo_saida);
+  }
+}
 
 int main() {
-  char cmd[200];
-  while (fgets(cmd, sizeof(cmd), stdin) > 0) {
-    if (strlen(cmd) > 0)
-      interpretar_linha(cmd);
-  }
+  //char cmd[200];
+  //while (fgets(cmd, sizeof(cmd), stdin) > 0) {
+  //  if (strlen(cmd) > 0)
+  //    interpretar_linha(cmd);
+  //}
+  criar_fifos();
+  atender_pedidos();
 }
