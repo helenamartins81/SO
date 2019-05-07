@@ -197,4 +197,5 @@ int main() {
   //}
   criar_fifos();
   atender_pedidos();
+  close(fifo_entrada);
 }

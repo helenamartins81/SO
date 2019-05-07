@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h> 
+#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -12,12 +12,6 @@
 
 int fifo_entrada = 0, fifo_saida = 0;
 
-void abrir_fifo() {
-  if ((fifo_entrada = open("fifo-entrada", O_WRONLY|O_CREAT, 0666)) < 0){
-    perror("Erro ao abrir o fifo de entrada!\n");
-  }
-
-}
 
 int main(int argc, char *argv[]) {
   pid_t pid;
@@ -25,11 +19,14 @@ int main(int argc, char *argv[]) {
   int len, *input_len = (int *)&buffer[0];
   char *input_str = &buffer[sizeof(int)];
 
+  if ((fifo_entrada = open("fifo-entrada", O_WRONLY|O_CREAT, 0666)) < 0){
+    perror("Erro ao abrir o fifo de entrada!\n");
+  }
+
   pid = getpid();
   printf("pid:%d\n",pid );
   sprintf(cliente, "fifo-%d", pid);
   mkfifo(cliente, 0660);
-  abrir_fifo();
 
   while (fgets(cmd, sizeof(cmd), stdin) > 0) {
     if (strlen(cmd) > 0) {
@@ -42,9 +39,11 @@ int main(int argc, char *argv[]) {
         perror("Erro ao abrir o fifo de saida!\n");
       len = read(fifo_saida, buffer, sizeof(buffer));
       buffer[len] = 0;
-      
+
       close(fifo_saida);
       printf("res (%d) = %s\n", len, buffer);
+
     }
   }
+  close(fifo_entrada);
 }
