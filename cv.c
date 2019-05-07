@@ -16,14 +16,18 @@ void abrir_fifo() {
   if ((fifo_entrada = open("fifo-entrada", O_WRONLY|O_CREAT, 0666)) < 0){
     perror("Erro ao abrir o fifo de entrada!\n");
   }
+
 }
 
 int main(int argc, char *argv[]) {
+  pid_t pid;
   char cmd[200], buffer[1000], cliente[200];
   int len, *input_len = (int *)&buffer[0];
   char *input_str = &buffer[sizeof(int)];
 
-  sprintf(cliente, "fifo-%d", rand());
+  pid = getpid();
+  printf("pid:%d\n",pid );
+  sprintf(cliente, "fifo-%d", pid);
   mkfifo(cliente, 0660);
   abrir_fifo();
 
@@ -38,6 +42,7 @@ int main(int argc, char *argv[]) {
         perror("Erro ao abrir o fifo de saida!\n");
       len = read(fifo_saida, buffer, sizeof(buffer));
       buffer[len] = 0;
+      
       close(fifo_saida);
       printf("res (%d) = %s\n", len, buffer);
     }
