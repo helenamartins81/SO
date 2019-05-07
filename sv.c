@@ -43,11 +43,15 @@ int modifica_stock(ArtIndex artigo, double quantidade, int output) {
 
 void atualiza_stock(Filepos codigo, int quantidade){
   Stock registo;
-  registo.quantidade = registo.quantidade + quantidade;
   int fd = open(FSTOCKS, O_CREAT | O_RDWR, 0660);
-  Filepos pos = lseek(fd, 0, SEEK_END);
+  lseek(fd, codigo * sizeof(Stock), SEEK_SET);
+  read(fd, &registo, sizeof(registo));
+  registo.quantidade += quantidade;
+  printf("quantidade %f", registo.quantidade);
+  lseek(fd, codigo * sizeof(Stock), SEEK_SET);
   write(fd, &registo, sizeof(registo));
   close(fd);
+
 }
 
 ArtIndex inserir_venda(ArtIndex codigo, double quantidade,int output){
@@ -72,7 +76,7 @@ ArtIndex inserir_venda(ArtIndex codigo, double quantidade,int output){
 void imprimir_venda(ArtIndex venda, int output) {
   Venda registo;
   int fd = open(FVENDAS, O_CREAT | O_RDONLY, 0660);
-  Filepos pos = lseek(fd, (venda - 1) *#include "defs.h" sizeof(Venda), SEEK_SET);
+  Filepos pos = lseek(fd, (venda - 1), SEEK_SET);
   if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
     print(output, "esse artigo nao existe\n");
   else {
@@ -99,20 +103,25 @@ void imprimir_stock(ArtIndex stock, int output) {
 
 void interpretar_linha(char *input, int output) {
   char str[200], nomesaida[200], *cmd;
-  printf("\ninterpretar input: %s", input);
+  char comandos[5];
 
   sscanf(input, "%s", nomesaida, sizeof(nomesaida));
   cmd = &input[strlen(nomesaida) + 1];
 
-  printf("\ninterpretar cmd: %s", cmd);
+  char *string, *found;
+  string = strdup(cmd);
+  int i =0;
+  while( (found = strsep(&string," ")) != NULL){
+    comandos[i] = found;
+    i++;
+  }
 
   if ((output = open(nomesaida, O_WRONLY)) < 0)
     perror("Erro ao abrir o fifo de saida!\n");
 
-  int c = strlen(cmd);
-
-  switch (c) {
-    case 3:
+  printf("i:%d\n",i);
+  switch (i+1) {
+    case 2:
     {
       Filepos stock;
       int params = sscanf(cmd, "%lu", &stock);
@@ -120,22 +129,23 @@ void interpretar_linha(char *input, int output) {
       imprimir_stock(stock, output);
       snprintf(str, sizeof(str), "stock %ld\n", stock);
       printf("ssss %d %s",output, str);
-      break;
+      break;  printf("puuuuuta\n" );
+
     }
-    case 5:
+    case 3:
     {
-      printf("puta %c\nputa1 %c\nputa2 %c", cmd[0], cmd[1], cmd[2] );
-      if(cmd[2]<0){
+      if(comandos[2]<0){
           ArtIndex codigo;
+          printf("addams %d\n", comandos[2]);
           double quantidade;
-          double total;
           int params = sscanf(cmd, "%lu %lf", &codigo, &quantidade);
+          printf("%f\n",quantidade );
           Filepos venda = inserir_venda(codigo, quantidade, output);
           snprintf(str, sizeof(str), "Venda %ld\n", venda);
           print(output, str);
           break;
         }
-      if(cmd[2]>0){
+      if(comandos[2]>0){
           printf("hello\n");
           Filepos stock;
           double quantidade;
