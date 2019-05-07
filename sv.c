@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h> /* chamadas ao sistema: defs e decls essenciais */
+#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -72,7 +72,7 @@ ArtIndex inserir_venda(ArtIndex codigo, double quantidade,int output){
 void imprimir_venda(ArtIndex venda, int output) {
   Venda registo;
   int fd = open(FVENDAS, O_CREAT | O_RDONLY, 0660);
-  Filepos pos = lseek(fd, (venda - 1) * sizeof(Venda), SEEK_SET);
+  Filepos pos = lseek(fd, (venda - 1) *#include "defs.h" sizeof(Venda), SEEK_SET);
   if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
     print(output, "esse artigo nao existe\n");
   else {
