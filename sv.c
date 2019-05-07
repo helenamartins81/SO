@@ -83,7 +83,7 @@ void imprimir_venda(ArtIndex venda, int output) {
 }
 
 void imprimir_stock(ArtIndex stock, int output) {
-
+  printf("estouaqui %ld\n", stock);
   Stock registo;
   int fd = open(FSTOCKS, O_CREAT | O_RDONLY, 0660);
   Filepos pos = lseek(fd, stock * sizeof(Stock), SEEK_SET);
@@ -110,23 +110,22 @@ void interpretar_linha(char *input, int output) {
     perror("Erro ao abrir o fifo de saida!\n");
 
   int c = strlen(cmd);
-      printf("estouaqui %d\n", c);
 
   switch (c) {
     case 3:
     {
-
       Filepos stock;
       int params = sscanf(cmd, "%lu", &stock);
-      printf("aaa%d\n",params );
+      printf("comando: %d\n",params );
       imprimir_stock(stock, output);
       snprintf(str, sizeof(str), "stock %ld\n", stock);
-      print(output, str);
+      printf("ssss %d %s",output, str);
       break;
     }
     case 5:
     {
-      if(cmd[5]<0){
+      printf("puta %c\nputa1 %c\nputa2 %c", cmd[0], cmd[1], cmd[2] );
+      if(cmd[2]<0){
           ArtIndex codigo;
           double quantidade;
           double total;
@@ -136,9 +135,10 @@ void interpretar_linha(char *input, int output) {
           print(output, str);
           break;
         }
-      if(cmd[5]>0){
+      if(cmd[2]>0){
+          printf("hello\n");
           Filepos stock;
-          double quantidade
+          double quantidade;
           int params = sscanf(cmd, "%lu %lf", &stock, &quantidade);
           atualiza_stock(stock,quantidade);
           imprimir_stock(stock,output);
@@ -175,6 +175,7 @@ void atender_pedidos() {
     printf("LER %d/%d, buffer %s\n", rd, len, buffer);
 
     interpretar_linha(buffer, fifo_saida);
+
   }
 }
 
