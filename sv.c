@@ -100,6 +100,7 @@ void imprimir_venda(ArtIndex venda, int output) {
 
 //imprime o stock
 void imprimir_stock(ArtIndex stock, int output) {
+  printf("estouaqui %ld\n", stock);
   Stock registo;
   int fd = open(FSTOCKS, O_CREAT | O_RDONLY, 0660);
   Filepos pos = lseek(fd, stock * sizeof(Stock), SEEK_SET);
@@ -117,28 +118,27 @@ void imprimir_stock(ArtIndex stock, int output) {
 //interpretar os pedidos do cliente
 void interpretar_linha(char *input, int output) {
   char str[200], nomesaida[200], *cmd;
-  char comandos[5];
+  char *dest[3];
 
   sscanf(input, "%s", nomesaida, sizeof(nomesaida));
   cmd = &input[strlen(nomesaida) + 1];
 
-  char *string, *found;
-  string = strdup(input);
-  int i =0;
-  while( (found = strsep(&string," ")) != NULL){
-    sprintf(comandos, "%s", found);
-  }
-  printf("comandos : %d %d", comandos[0], comandos[1]);
+  char *st = input;
+  int i;
+  for (i = 0; i < 3 && (dest[i] = strsep(&st, " ")) != NULL; i++)
+          ;
+  for (int c = 0; c < i; c++)
+    printf(" arg %d : [%s]\n", c, dest[c]);
 
   if ((output = open(nomesaida, O_WRONLY)) < 0)
     perror("Erro ao abrir o fifo de saida!\n");
 
   printf("i:%d\n",i);
-  switch (i+1) {
-    case 1:
+  switch (i) {
+    case 2:
     {
       Filepos stock;
-      int params = sscanf(comandos, "%lu", &stock);
+      int params = sscanf(dest[1], "%lu", &stock);
       printf("comando: %d\n",params );
       imprimir_stock(stock, output);
       snprintf(str, sizeof(str), "stock %ld\n", stock);
@@ -147,25 +147,26 @@ void interpretar_linha(char *input, int output) {
       printf("puuuuuta\n" );
 
     }
-    case 2:
+    case 3:
     {
-      if(comandos[1]<0){
+      printf("addams é fixe\n");
+      if(dest[2]<0){
           ArtIndex codigo;
           double quantidade;
-          sscanf(comandos[0], "%ld", &codigo);
-          sscanf(comandos[1], "%lf", &quantidade);
+          sscanf(dest[1], "%ld", &codigo);
+          sscanf(dest[2], "%lf", &quantidade);
           printf("%f\n",quantidade );
           Filepos venda = inserir_venda(codigo, quantidade, output);
           snprintf(str, sizeof(str), "Venda %ld\n", venda);
           print(output, str);
           break;
         }
-      if(comandos[1]>0){
+      if(dest[2]>0){
           printf("hello\n");
           Filepos stock;
           double quantidade;
-          sscanf(comandos[0], "%lu", &stock);
-          sscanf(comandos[1], "%lf", &quantidade);
+          sscanf(dest[1], "%lu", &stock);
+          sscanf(dest[2], "%lf", &quantidade);
           atualiza_stock(stock,quantidade);
           imprimir_stock(stock,output);
           //snprintf(str, sizeof(str), "venda %ld\n", venda);
