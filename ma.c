@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h> 
+#include <unistd.h> /* chamadas ao sistema: defs e decls essenciais */
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -32,14 +32,14 @@ char * ler_nome(Filepos nome) {
   return nome_lido;
 }
 
-Filepos inicializa_stock( Filepos codigo){
+void inicializa_stock( Filepos codigo){
   Stock novo;
   novo.quantidade = 0;
   int fd = open(FSTOCKS, O_CREAT | O_RDWR, 0660);
   Filepos pos = lseek(fd, 0, SEEK_END);
   write(fd, &novo, sizeof(novo));
   close(fd);
-  return pos / sizeof(Stock);
+//  return 1 + pos / sizeof(Stock);
 }
 
 ArtIndex inserir_artigo(char *nome, double preco) {
@@ -92,7 +92,7 @@ void imprimir_artigo(ArtIndex artigo) {
 void imprimir_stock(ArtIndex stock) {
   Stock registo;
   int fd = open(FSTOCKS, O_CREAT | O_RDONLY, 0660);
-  Filepos pos = lseek(fd, (stock - 1) * sizeof(Stock), SEEK_SET);
+  Filepos pos = lseek(fd, (stock - 1)* sizeof(Stock), SEEK_SET);
   if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
     printf("esse artigo nao existe\n");
   else {
