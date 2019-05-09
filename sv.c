@@ -10,6 +10,7 @@
 
 #include "defs.h"
 
+char * myfifo = "fifo-mensagem";
 
 void print(int output, char * str) {
   write(output, str, strlen(str));
@@ -31,7 +32,7 @@ double preco_total(ArtIndex artigo, double quantidade) {
 //decrementa o stock quando há vendas
 int modifica_stock(ArtIndex artigo, double quantidade, int output) {
   Stock registo;
-  int fd = open(FSTOCKS, O_CREAT | O_RDWR, 0660);
+  int fd = open(FSTOCKS, O_RDWR, 0660);
   lseek(fd, artigo * sizeof(Stock), SEEK_SET);
   read(fd, &registo, sizeof(registo));
   if (registo.quantidade-quantidade < 0){
@@ -44,11 +45,11 @@ int modifica_stock(ArtIndex artigo, double quantidade, int output) {
   return 1;
 }
 
-
+//corrigir isto
 //incrementa o stock quando são adicionados artigos
 int atualiza_stock(Filepos codigo, int quantidade){
   Stock registo;
-  int fd = open(FSTOCKS, O_CREAT | O_RDWR, 0660);
+  int fd = open(FSTOCKS, O_RDWR, 0660);
   lseek(fd, codigo * sizeof(Stock), SEEK_SET);
   read(fd, &registo, sizeof(registo));
   registo.quantidade += quantidade;
@@ -108,6 +109,7 @@ void imprimir_stock(ArtIndex stock, int output) {
     print(output, "esse artigo nao existe\n");
   else {
     char str[200];
+    printf("%f",registo.quantidade);
     sprintf(str, "id: %ld\nquantidade:%lf\n", stock, registo.quantidade);
     print(output, str);
   }
@@ -121,7 +123,9 @@ void interpretar_linha(char *input, int output) {
   char *dest[3];
 
   sscanf(input, "%s", nomesaida, sizeof(nomesaida));
+  printf("pid do cliente %s\n",nomesaida);
   cmd = &input[strlen(nomesaida) + 1];
+  printf("comando %s\n",cmd);
 
   char *st = input;
   int i;
@@ -133,7 +137,7 @@ void interpretar_linha(char *input, int output) {
   if ((output = open(nomesaida, O_WRONLY)) < 0)
     perror("Erro ao abrir o fifo de saida!\n");
 
-  printf("i:%d\n",i);
+  printf("i:%d\n",i); // ir buscar a quantidade escolhida
   switch (i) {
     case 2:
     {
@@ -183,29 +187,34 @@ void interpretar_linha(char *input, int output) {
 }
 
 
-int fifo_entrada = 0, fifo_saida = 1;
-
+int ler_do_pipe = 0, fifo_saida = 1;
+/*
 void criar_fifos() {
   mkfifo("fifo-servidor", 0660);
 
   if ((fifo_entrada = open("fifo-entrada", O_RDONLY)) < 0)
     perror("Erro ao abrir o fifo de entrada!\n");
 }
-
+*/
 
 void atender_pedidos() {
   char buffer[200];
   int len, rd;
-  printf("a ler do pipe\n");
-  fflush(stdout);
-  while ((rd = read(fifo_entrada, &len, sizeof(len))) > 0) {
-    rd += read(fifo_entrada, &buffer, len - sizeof(int));
-    printf("LER %d/%d, buffer %s\n", rd, len, buffer);
+
+  //printf("a ler do pipe\n");
+  //fflush(stdout);
+  if ((ler_do_pipe = open(myfifo, O_RDONLY)) < 0)
+    perror("Erro ao abrir o fifo de entrada!\n");
+
+  while ((rd = read(ler_do_pipe, &buffer, sizeof(buffer))) > 0) {
+    printf("LER %d, buffer %s\n", rd, buffer);
 
     interpretar_linha(buffer, fifo_saida);
 
   }
+  close(myfifo);
   close(rd);
+  close(ler_do_pipe);
 }
 
 
@@ -215,6 +224,8 @@ int main() {
   //  if (strlen(cmd) > 0)
   //    interpretar_linha(cmd);
   //}
-  criar_fifos();
-  atender_pedidos();
+    while(1){
+    atender_pedidos();
+    }
+
 }
