@@ -11,6 +11,7 @@
 #include "defs.h"
 
 char * myfifo = "fifo-mensagem";
+char *myfifo2 = "fifo2";
 
 void print(int output, char * str) {
   write(output, str, strlen(str));
@@ -131,8 +132,6 @@ void interpretar_linha(char *input, int output) {
   char *st = input;
   int i;
   for (i = 0; i < 3 && (dest[i] = strsep(&st, " ")) != NULL; i++);
-if ((output = open("output_comando", O_WRONLY,0666)) < 0)
-    perror("Erro ao abrir o fifo de saida!\n");
 
 
   switch (i) {
@@ -183,19 +182,39 @@ int ler_do_pipe = 0, fifo_saida = 1;
 
 void atender_pedidos() {
   char buffer[200];
-  int len, rd;
+  int fd, rd, w, out;
 
-  if ((ler_do_pipe = open(myfifo, O_RDONLY)) < 0)
+  char * myfifo = "fifo-mensagem";
+  mkfifo(myfifo, 0666);
+
+  if ((fd = open(myfifo, O_RDONLY)) < 0){
     perror("Erro ao abrir o fifo de entrada!\n");
+    exit(-1);
+  }
 
-  while ((rd = read(ler_do_pipe, &buffer, sizeof(buffer))) > 0) {
+  while ((rd = read(fd, buffer, sizeof(buffer))) > 0) {
     printf("LER %d, buffer %s\n", rd, buffer);
 
     interpretar_linha(buffer, fifo_saida);
 
   }
+
   close(rd);
-  close(ler_do_pipe);
+  close(fd);
+
+  if ((out = open(myfifo2, O_WRONLY,0666)) < 0){
+      perror("Erro ao abrir o fifo de saida!\n");
+      exit(-1);
+  }
+/*
+  if((w = write(fifo_saida, input_str, *input_len)) < 0){
+    perror("Erro ao abrir o fifo de entrada!\n");
+    exit(-1);
+  }
+  close(w);
+  */
+  close (out);
+
 }
 
 
