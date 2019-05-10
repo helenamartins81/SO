@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   char input_str[1024]; //&buffer[sizeof(int)];
 
 
-  int ver = mkfifo(myfifo,0600);
+  int ver = mkfifo(myfifo,0666);
 
 
   pid = getpid();
@@ -39,16 +39,19 @@ int main(int argc, char *argv[]) {
 
       write(fifo_entrada, input_str, *input_len);
       close(fifo_entrada);
-      close(myfifo);
 
 
-      if ((fifo_saida = open(cliente, O_RDONLY)) > 0)
+
+      if ((fifo_saida = open("output_comando", O_RDONLY,0666)) < 0)
         perror("Erro ao abrir o fifo de saida!\n");
 
-      len = read(fifo_saida, buffer, sizeof(buffer));
-      buffer[len] = 0;
+        while ((len = read(fifo_saida, &buffer, sizeof(buffer))) > 0) {
+          printf("O que eu li %s\n", buffer);
+        }
+      //buffer[len] = 0;
 
       close(fifo_saida);
+      close(len);
 
     }
   }
