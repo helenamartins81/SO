@@ -121,7 +121,7 @@ void interpretar_linha(char *input, int output) {
   char str[200], nomesaida[200], *cmd;
   char *dest[3];
 
-  sscanf(input, "%s", nomesaida, sizeof(nomesaida));
+  sscanf(input, "%s", nomesaida);
   printf("pid do cliente %s\n",nomesaida);
   cmd = &input[strlen(nomesaida) + 1];
   printf("comando %s\n",cmd);
@@ -144,8 +144,8 @@ void interpretar_linha(char *input, int output) {
 
     }
     case 3:
-    { printf("vendas <o %s\n", dest[2] );
-      if(dest[2]>0){
+    {
+      if(atoi(dest[2])>0){
         Filepos stock;
         double quantidade;
         sscanf(dest[1], "%lu", &stock);
@@ -156,47 +156,29 @@ void interpretar_linha(char *input, int output) {
         //print(output, str);
         break;
       }
-      else{
+      if(atoi(dest[2])<0){
           ArtIndex codigo;
           double quantidade;
           sscanf(dest[1], "%ld", &codigo);
           sscanf(dest[2], "%lf", &quantidade);
           printf("%f\n",quantidade );
           Filepos venda = inserir_venda(codigo, quantidade, output);
+          imprimir_stock(codigo,output);
           snprintf(str, sizeof(str), "Venda %ld\n", venda);
           print(output, str);
           break;
         }
-    /*  if(dest[2]>0){
-          Filepos stock;
-          double quantidade;
-          sscanf(dest[1], "%lu", &stock);
-          sscanf(dest[2], "%lf", &quantidade);
-          atualiza_stock(stock,quantidade);
-          imprimir_stock(stock,output);
-          //snprintf(str, sizeof(str), "venda %ld\n", venda);
-          //print(output, str);
-          break;
-        }*/
-      }
 
     default:
       snprintf(str, sizeof(str), "operacao invalida: %s\n", cmd);
       print(output, str);
   }
   close(output);
+  }
 }
 
 
 int ler_do_pipe = 0, fifo_saida = 1;
-/*
-void criar_fifos() {
-  mkfifo("fifo-servidor", 0660);
-
-  if ((fifo_entrada = open("fifo-entrada", O_RDONLY)) < 0)
-    perror("Erro ao abrir o fifo de entrada!\n");
-}
-*/
 
 void atender_pedidos() {
   char buffer[200];
@@ -218,8 +200,7 @@ void atender_pedidos() {
 
 
 int main() {
-    while(1){
+    while(1)
     atender_pedidos();
-    }
 
 }
