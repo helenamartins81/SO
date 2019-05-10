@@ -13,6 +13,7 @@
 char * myfifo = "fifo-mensagem";
 char *myfifo2 = "fifo2";
 
+
 void print(int output, char * str) {
   write(output, str, strlen(str));
   write(output, "\n", strlen("\n"));
@@ -206,6 +207,12 @@ void atender_pedidos() {
       perror("Erro ao abrir o fifo de saida!\n");
       exit(-1);
   }
+
+  char resposta[200];
+  printf("quantidade:%d", fifo_saida);
+  sprintf(resposta, "quantidade:%d", fifo_saida);
+  write(out, &resposta, sizeof(resposta));
+
 /*
   if((w = write(fifo_saida, input_str, *input_len)) < 0){
     perror("Erro ao abrir o fifo de entrada!\n");

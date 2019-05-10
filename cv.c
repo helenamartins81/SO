@@ -51,15 +51,19 @@ int main(int argc, char *argv[]) {
         perror("Erro ao abrir o fifo de saida!\n");
         exit(-1);
       }
-      /*
-    if((len = read(fifo_saida, &buffer, sizeof(buffer))) < 0) {
+
+      char resposta[200];
+      if((len = read(fifo_saida, &resposta, sizeof(resposta))) < 0) {
         perror("Erro ao abrir o fifo de saida!\n");
         exit(-1);
       }
+      else{
+        write(1, &resposta, len);
+      }
 
-      close(fifo_saida);
-      close(len);
-      */
+      //close(fifo_saida);
+      //close(len);
+
 
     }
 
