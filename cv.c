@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -50,14 +51,15 @@ int main(int argc, char *argv[]) {
         perror("Erro ao abrir o fifo de saida!\n");
         exit(-1);
       }
-
+      /*
     if((len = read(fifo_saida, &buffer, sizeof(buffer))) < 0) {
         perror("Erro ao abrir o fifo de saida!\n");
         exit(-1);
       }
 
       close(fifo_saida);
-      //close(len);
+      close(len);
+      */
 
     }
 
