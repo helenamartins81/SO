@@ -38,7 +38,7 @@ int modifica_stock(ArtIndex artigo, double quantidade, int output) {
   if (registo.quantidade-quantidade < 0){
     print(output, "não tem stock disponivel\n" );
     return 0;}
-  else registo.quantidade -= quantidade;
+  else registo.quantidade = registo.quantidade - quantidade;
   lseek(fd, artigo * sizeof(Stock), SEEK_SET);
   write(fd, &registo, sizeof(registo));
   close(fd);
@@ -53,7 +53,6 @@ int atualiza_stock(Filepos codigo, int quantidade){
   lseek(fd, codigo * sizeof(Stock), SEEK_SET);
   read(fd, &registo, sizeof(registo));
   registo.quantidade += quantidade;
-  printf("quantidade %f", registo.quantidade);
   lseek(fd, codigo * sizeof(Stock), SEEK_SET);
   write(fd, &registo, sizeof(registo));
   close(fd);
@@ -68,6 +67,7 @@ ArtIndex inserir_venda(ArtIndex codigo, double quantidade,int output){
   novo.quantidade = -1 * quantidade;
   novo.total = preco_total(codigo,quantidade);
   novo.tempo = time(&novo.tempo);
+  printf("vendas\n");
   int fd = open(FVENDAS, O_CREAT | O_RDWR, 0660);
   Filepos pos = lseek(fd, 0, SEEK_END);
   if (modifica_stock(codigo, quantidade, output) == 1){
@@ -101,7 +101,6 @@ void imprimir_venda(ArtIndex venda, int output) {
 
 //imprime o stock
 void imprimir_stock(ArtIndex stock, int output) {
-  printf("estouaqui %ld\n", stock);
   Stock registo;
   int fd = open(FSTOCKS, O_CREAT | O_RDONLY, 0660);
   Filepos pos = lseek(fd, stock * sizeof(Stock), SEEK_SET);
@@ -109,7 +108,6 @@ void imprimir_stock(ArtIndex stock, int output) {
     print(output, "esse artigo nao existe\n");
   else {
     char str[200];
-    printf("%f",registo.quantidade);
     sprintf(str, "id: %ld\nquantidade:%lf\n", stock, registo.quantidade);
     print(output, str);
   }
@@ -119,6 +117,7 @@ void imprimir_stock(ArtIndex stock, int output) {
 
 //interpretar os pedidos do cliente
 void interpretar_linha(char *input, int output) {
+  printf("output %d\n", output );
   char str[200], nomesaida[200], *cmd;
   char *dest[3];
 
@@ -129,32 +128,35 @@ void interpretar_linha(char *input, int output) {
 
   char *st = input;
   int i;
-  for (i = 0; i < 3 && (dest[i] = strsep(&st, " ")) != NULL; i++)
-          ;
-  for (int c = 0; c < i; c++)
-    printf(" arg %d : [%s]\n", c, dest[c]);
-
-  if ((output = open(nomesaida, O_WRONLY)) < 0)
+  for (i = 0; i < 3 && (dest[i] = strsep(&st, " ")) != NULL; i++);
+  if ((output = open(nomesaida, O_WRONLY)) > 0)
     perror("Erro ao abrir o fifo de saida!\n");
 
-  printf("i:%d\n",i); // ir buscar a quantidade escolhida
+
   switch (i) {
     case 2:
     {
       Filepos stock;
-      int params = sscanf(dest[1], "%lu", &stock);
-      printf("comando: %d\n",params );
+      sscanf(dest[1], "%lu", &stock);
       imprimir_stock(stock, output);
       snprintf(str, sizeof(str), "stock %ld\n", stock);
-      printf("ssss %d %s",output, str);
       break;
-      printf("puuuuuta\n" );
 
     }
     case 3:
-    {
-      printf("addams é fixe\n");
-      if(dest[2]<0){
+    { printf("vendas <o %s\n", dest[2] );
+      if(dest[2]>0){
+        Filepos stock;
+        double quantidade;
+        sscanf(dest[1], "%lu", &stock);
+        sscanf(dest[2], "%lf", &quantidade);
+        atualiza_stock(stock,quantidade);
+        imprimir_stock(stock,output);
+        //snprintf(str, sizeof(str), "venda %ld\n", venda);
+        //print(output, str);
+        break;
+      }
+      else{
           ArtIndex codigo;
           double quantidade;
           sscanf(dest[1], "%ld", &codigo);
@@ -165,8 +167,7 @@ void interpretar_linha(char *input, int output) {
           print(output, str);
           break;
         }
-      if(dest[2]>0){
-          printf("hello\n");
+    /*  if(dest[2]>0){
           Filepos stock;
           double quantidade;
           sscanf(dest[1], "%lu", &stock);
@@ -176,7 +177,7 @@ void interpretar_linha(char *input, int output) {
           //snprintf(str, sizeof(str), "venda %ld\n", venda);
           //print(output, str);
           break;
-        }
+        }*/
       }
 
     default:
@@ -201,8 +202,6 @@ void atender_pedidos() {
   char buffer[200];
   int len, rd;
 
-  //printf("a ler do pipe\n");
-  //fflush(stdout);
   if ((ler_do_pipe = open(myfifo, O_RDONLY)) < 0)
     perror("Erro ao abrir o fifo de entrada!\n");
 
@@ -219,11 +218,6 @@ void atender_pedidos() {
 
 
 int main() {
-  //char cmd[200];
-  //while (fgets(cmd, sizeof(cmd), stdin) > 0) {
-  //  if (strlen(cmd) > 0)
-  //    interpretar_linha(cmd);
-  //}
     while(1){
     atender_pedidos();
     }
