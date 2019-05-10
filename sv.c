@@ -35,10 +35,10 @@ int modifica_stock(ArtIndex artigo, double quantidade, int output) {
   int fd = open(FSTOCKS, O_RDWR, 0660);
   lseek(fd, artigo * sizeof(Stock), SEEK_SET);
   read(fd, &registo, sizeof(registo));
-  if (registo.quantidade-quantidade < 0){
-    print(output, "não tem stock disponivel\n" );
+  if (registo.quantidade-(-1*quantidade) < 0){
+
     return 0;}
-  else registo.quantidade = registo.quantidade - quantidade;
+  else registo.quantidade = registo.quantidade - (-1*quantidade);
   lseek(fd, artigo * sizeof(Stock), SEEK_SET);
   write(fd, &registo, sizeof(registo));
   close(fd);
@@ -49,7 +49,7 @@ int modifica_stock(ArtIndex artigo, double quantidade, int output) {
 //incrementa o stock quando são adicionados artigos
 int atualiza_stock(Filepos codigo, int quantidade){
   Stock registo;
-  int fd = open(FSTOCKS, O_RDWR, 0660);
+  int fd = open(FSTOCKS, O_RDWR, 0666);
   lseek(fd, codigo * sizeof(Stock), SEEK_SET);
   read(fd, &registo, sizeof(registo));
   registo.quantidade += quantidade;
@@ -67,7 +67,6 @@ ArtIndex inserir_venda(ArtIndex codigo, double quantidade,int output){
   novo.quantidade = -1 * quantidade;
   novo.total = preco_total(codigo,quantidade);
   novo.tempo = time(&novo.tempo);
-  printf("vendas\n");
   int fd = open(FVENDAS, O_CREAT | O_RDWR, 0660);
   Filepos pos = lseek(fd, 0, SEEK_END);
   if (modifica_stock(codigo, quantidade, output) == 1){
@@ -102,7 +101,7 @@ void imprimir_venda(ArtIndex venda, int output) {
 //imprime o stock
 void imprimir_stock(ArtIndex stock, int output) {
   Stock registo;
-  int fd = open(FSTOCKS, O_CREAT | O_RDONLY, 0660);
+  int fd = open(FSTOCKS, O_CREAT | O_RDONLY, 0666);
   Filepos pos = lseek(fd, stock * sizeof(Stock), SEEK_SET);
   if (read(fd, &registo, sizeof(registo)) < sizeof(registo))
     print(output, "esse artigo nao existe\n");
@@ -121,6 +120,9 @@ void interpretar_linha(char *input, int output) {
   char str[200], nomesaida[200], *cmd;
   char *dest[3];
 
+  int fifo_saida = mkfifo("output_comando",0666);
+
+
   sscanf(input, "%s", nomesaida);
   printf("pid do cliente %s\n",nomesaida);
   cmd = &input[strlen(nomesaida) + 1];
@@ -129,7 +131,7 @@ void interpretar_linha(char *input, int output) {
   char *st = input;
   int i;
   for (i = 0; i < 3 && (dest[i] = strsep(&st, " ")) != NULL; i++);
-  if ((output = open(nomesaida, O_WRONLY)) > 0)
+if ((output = open("output_comando", O_WRONLY,0666)) < 0)
     perror("Erro ao abrir o fifo de saida!\n");
 
 
@@ -171,7 +173,6 @@ void interpretar_linha(char *input, int output) {
 
     default:
       snprintf(str, sizeof(str), "operacao invalida: %s\n", cmd);
-      print(output, str);
   }
   close(output);
   }
@@ -193,7 +194,6 @@ void atender_pedidos() {
     interpretar_linha(buffer, fifo_saida);
 
   }
-  close(myfifo);
   close(rd);
   close(ler_do_pipe);
 }
