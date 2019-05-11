@@ -12,6 +12,7 @@
 
 char * myfifo = "fifo-mensagem";
 char *myfifo2 = "fifo2";
+char resposta[200];
 
 
 void print(int output, char * str) {
@@ -95,6 +96,7 @@ void imprimir_venda(ArtIndex venda, int output) {
     char str[200];
     sprintf(str, "codigo %ld\nquantidade %lf\npreço total %lf\ntempo:%s", registo.codigo, registo.quantidade, registo.total, ctime(&registo.tempo));
     print(output, str);
+    sprintf(resposta, "quantidade: %lf\n", registo.quantidade);
   }
   close(fd);
 }
@@ -111,6 +113,7 @@ void imprimir_stock(ArtIndex stock, int output) {
     char str[200];
     sprintf(str, "id: %ld\nquantidade:%lf\n", stock, registo.quantidade);
     print(output, str);
+    sprintf(resposta, "quantidade: %lf\n", registo.quantidade);
   }
   close(fd);
 }
@@ -207,11 +210,11 @@ void atender_pedidos() {
       perror("Erro ao abrir o fifo de saida!\n");
       exit(-1);
   }
+  
 
-  char resposta[200];
-  printf("quantidade:%d", fifo_saida);
-  sprintf(resposta, "quantidade:%d", fifo_saida);
+
   write(out, &resposta, sizeof(resposta));
+
 
 /*
   if((w = write(fifo_saida, input_str, *input_len)) < 0){
