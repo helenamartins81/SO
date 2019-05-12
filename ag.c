@@ -1,125 +1,93 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
+#include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <string.h>
+#include <stdlib.h>
 #include <sys/types.h>
-#include <sys/wait.h>
-#include <time.h>
-
-
+#include <math.h>
 #include "defs.h"
 
-/*
-1- ler do ficheiro vendas e guarda num array (guardar o numero de bytes que se leram)
-2- mandar isso para o agregador
-3- o agregador devolve o resultado
-4- o servidor escreve no novo ficheiro esse resultado
-*/
+int main(int argc, char** argv){
+    int vendas = open(FVENDAS, O_RDWR);
+    pid_t son;
 
-int c = 0;
-int main(int argc, char** arv){
-
-  int in = open(FVENDAS, O_RDWR);
-
-  pid_t filho;
-  int p1[2];
-  int p2[2];
-
-  if(pipe(p1) < 0){
-    exit(-1);
-  }
-  if(pipe(2) < 0){
-    exit(-1);
-  }
+    int p1[2];
+    int p2[2];
 
 
-  if((filho = fork()) == 0){
+    if(pipe(p1) < 0 || pipe(p2) < 0){
+        exit(1);
+    }
 
+    if((son = fork())==0){
+        char ad[512];
 
-    int dif = 0;
+        sprintf(ad, "%d", getpid());
+        int sumFile = open(ad, O_RDWR | O_CREAT, 0666);
+        int dif = 0;
 
+        close(p1[1]);
+        dup2(p1[0], 0);
+        close(p1[0]);
 
-    // Tratar do pipe de entrada FILHO
-    close(p1[1]);
-    dup2(p1[0], 0);
-    close(p1[0]);
+        close(p2[0]);
+        dup2(p2[1], 1);
+        close(p2[1]);
 
-    // Tratar do pipe de saída FILHO
-    close(p2[0]);
-    dup2(p2[1], 1);
-    close(p2[1]);
+        Venda venda;
+        Venda venda_aux;
+        int i;
+        int quant = 0;
+        double preco = 0.0;
 
-    Venda *vendas;
-    Venda venda;
-    Venda aux;
-    int i;
-    double quantidade = 0, preco = 0;
+        while(read(0, &venda, 16)){
 
+            lseek(sumFile, 0, SEEK_SET);
+            for(i = 0; i < dif; i++){
+                read(sumFile, &venda_aux, 16);
 
-    // Receção das entradas do ficheiro de vendas vindo do pipe
-    while(read(0, venda, sizeof(Venda))){ // vai ler para a venda
-      //
+                if(venda_aux.codigo == venda.codigo){
+                    quant = venda_aux.quantidade + venda.quantidade;
+                    preco = venda_aux.total + venda.total;
 
-      // Inicializar uma Venda que vamos ler do ficheiro
-      for(i=0, i<dif; i++){
-        read(vendas[i], aux, sizeof(Venda));
+                    lseek(sumFile, (i*16) + 4, SEEK_SET);
+                    write(sumFile, &quant, 4);
+                    write(sumFile, &preco, 8);
 
-        if(aux.codigo == venda.codigo){
+                    break;
+                }
+            }
 
-          //somar a quantidade e preco se os codigos forem iguais
-          quantidade = aux.quantidade  + venda.quantidade;
-          preco = aux.preco + venda.quantidade;
-
-          vendas[i].quantidade = quantidade;
-          vendas[i].preco = preco;
-
-          break;
+            if(i == dif){
+                lseek(sumFile, 0, SEEK_END);
+                write(sumFile, &venda, 16);
+                dif++;
+            }
 
         }
-      }
-      if(i == dif){
-        vendas[i] = venda;
-        dif++;
-      }
 
+        lseek(sumFile, 0, SEEK_SET);
+
+        while(read(sumFile, &venda, 16) > 0){
+            write(1, &venda, 16);
+        }
+        close(1);
+        execlp("rm", "rm", ad, NULL);
+
+    } else {
+        close(p1[0]);
+        close(p2[1]);
+
+        Venda venda;
+        while(read(vendas, &venda, 16)){
+            printf("Codigo: %ld, Quantidade: %f, Preco: %.2f\n", venda.codigo, venda.quantidade, venda.total);
+            write(p1[1], &venda, 16);
+        }
+
+        close(p1[1]);
+
+        while(read(p2[0], &venda, 16)){
+            printf("Codigo: %ld, Quantidade: %f, Preco: %.2f\n", venda.codigo, venda.quantidade, venda.total);
+        }
     }
-    //ir para o inicio do array
-    i = 0;
-
-    //Ler o resultado e mandar para o servidor
-
-    while(read(vendas[i], venda, sizeof(Venda)) > 0){
-      write(1, venda, sizeof(Venda));
-    }
-
-    //fechar pipe apos a conclusao da escrita
-    close(1);
-
-  }
-  else{
-
-    close(p1[0]);
-    close(p2[1]);
-
-    Venda v;
-
-    //lerdo ficheiro das VENDAS
-    while(read(in, v, sizeof(Venda))){
-      printf("ENVIANDO -> Code: %d, Quantity: %d, Price: %.2f\n", v.codigo, v.quantidade, v.preco);
-      write(p1[1], v, sizeof(Venda));
-    }
-
-    //fechar quando se acaba de enviar
-    close(p1[1]);
-
-    //receber conjunto agregado do FILHO
-    while(read(p2[0], v, sizeof(Venda))){
-        printf("RECEBENDO -> Code: %d, Quantity: %d, Price: %.2f\n", v.codigo, v.quantidade, v.preco);
-    }
-
-  }
-
-	return 0;
 }
