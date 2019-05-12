@@ -10,6 +10,21 @@
 
 #include "defs.h"
 
+int readlinha( char *buf, size_t nbyte,int fildes){
+    int i=0;
+
+    while(i <nbyte-1 &&
+         read(fildes, buf+i,1)>0 &&
+         buf[i] != '\n'){
+         i++;
+    }
+    if(i >= nbyte)
+           buf[i] = 0;
+    else
+           buf[i+1] = 0;
+
+    return i;
+}
 
 int fifo_entrada = 0, fifo_saida = 0;
 char * myfifo = "fifo-mensagem";
@@ -26,10 +41,9 @@ int main(int argc, char *argv[]) {
 
 
   pid = getpid();
-  sprintf(cliente, "%d", pid); // Esta parte aqui acho q é para quando houver filhos
-  //mkfifo(cliente, 0660);
+  sprintf(cliente, "%d", pid);
 
-  while (fgets(cmd, sizeof(cmd), stdin) > 0) {
+  while (readlinha(cmd, sizeof(cmd), 0) > 0) {
     if (strlen(cmd) > 0) {
       if ((fifo_entrada = open(myfifo, O_WRONLY, 0666)) < 0){
         perror("Erro ao abrir o fifo de entrada!\n");
@@ -60,10 +74,6 @@ int main(int argc, char *argv[]) {
       else{
         write(1, &resposta, len);
       }
-
-      //close(fifo_saida);
-      //close(len);
-
 
     }
 

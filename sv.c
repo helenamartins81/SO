@@ -48,7 +48,7 @@ int modifica_stock(ArtIndex artigo, double quantidade, int output) {
   return 1;
 }
 
-//corrigir isto
+
 //incrementa o stock quando são adicionados artigos
 int atualiza_stock(Filepos codigo, int quantidade){
   Stock registo;
@@ -121,7 +121,6 @@ void imprimir_stock(ArtIndex stock, int output) {
 
 //interpretar os pedidos do cliente
 void interpretar_linha(char *input, int output) {
-  printf("output %d\n", output );
   char str[200], nomesaida[200], *cmd;
   char *dest[3];
 
@@ -129,9 +128,7 @@ void interpretar_linha(char *input, int output) {
 
 
   sscanf(input, "%s", nomesaida);
-  printf("pid do cliente %s\n",nomesaida);
   cmd = &input[strlen(nomesaida) + 1];
-  printf("comando %s\n",cmd);
 
   char *st = input;
   int i;
@@ -166,7 +163,7 @@ void interpretar_linha(char *input, int output) {
           double quantidade;
           sscanf(dest[1], "%ld", &codigo);
           sscanf(dest[2], "%lf", &quantidade);
-          printf("%f\n",quantidade );
+
           Filepos venda = inserir_venda(codigo, quantidade, output);
           imprimir_stock(codigo,output);
           snprintf(str, sizeof(str), "Venda %ld\n", venda);
@@ -197,7 +194,6 @@ void atender_pedidos() {
   }
 
   while ((rd = read(fd, buffer, sizeof(buffer))) > 0) {
-    printf("LER %d, buffer %s\n", rd, buffer);
 
     interpretar_linha(buffer, fifo_saida);
 
@@ -210,19 +206,12 @@ void atender_pedidos() {
       perror("Erro ao abrir o fifo de saida!\n");
       exit(-1);
   }
-  
+
 
 
   write(out, &resposta, sizeof(resposta));
 
 
-/*
-  if((w = write(fifo_saida, input_str, *input_len)) < 0){
-    perror("Erro ao abrir o fifo de entrada!\n");
-    exit(-1);
-  }
-  close(w);
-  */
   close (out);
 
 }

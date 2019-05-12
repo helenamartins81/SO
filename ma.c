@@ -1,10 +1,8 @@
-//inserir novos artigos ou modificar atributos de artigos.
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h> /* chamadas ao sistema: defs e decls essenciais */
+#include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -39,7 +37,7 @@ void inicializa_stock( Filepos codigo){
   Filepos pos = lseek(fd, 0, SEEK_END);
   write(fd, &novo, sizeof(novo));
   close(fd);
-//  return 1 + pos / sizeof(Stock);
+
 }
 
 ArtIndex inserir_artigo(char *nome, double preco) {
@@ -138,22 +136,31 @@ void interpretar_linha(char *cmd) {
       imprimir_artigo(artigo);
       break;
     }
-    case 's':
-    {
-      Filepos stock;
-      int params = sscanf(cmd, "s %lu", &stock);
-      imprimir_stock(stock);
-      break;
-    }
     default:
       printf("operacao invalida: %s\n", cmd);
 
   }
 }
 
+int readlinha( char *buf, size_t nbyte,int fildes){
+    int i=0;
+
+    while(i <nbyte-1 &&
+         read(fildes, buf+i,1)>0 &&
+         buf[i] != '\n'){
+         i++;
+    }
+    if(i >= nbyte)
+           buf[i] = 0;
+    else
+           buf[i+1] = 0;
+
+    return i;
+}
+
 int main() {
   char cmd[200];
-  while (fgets(cmd, sizeof(cmd), stdin) > 0) {
+  while (readlinha(cmd, sizeof(cmd), 0) > 0) {
     if (strlen(cmd) > 0)
       interpretar_linha(cmd);
   }
